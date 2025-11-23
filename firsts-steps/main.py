@@ -1,15 +1,18 @@
 
 import os
+from datetime import datetime
 from hmac import new
 from re import search
 from unittest import result
 from urllib import response
-from fastapi import Body, FastAPI, Query, HTTPException, Path
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from fastapi import Body, Depends, FastAPI, Query, HTTPException, Path, status, Depends
+from pydantic import BaseModel, Field, field_validator, EmailStr, ConfigDict
 from typing import Literal, Optional, List, Union
 from math import ceil
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
+from sqlalchemy import create_engine, Integer, String, Text, DateTime, select, func
+import sqlalchemy
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.exc import SQLAlchemyError
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./blog.db")
 print("Conectado a:", DATABASE_URL)
@@ -25,6 +28,18 @@ SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, clas
 
 class Base(DeclarativeBase):
     pass
+
+class PostORM(Base):
+    __tablename__ = "posts"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    content: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+Base.metadata.create_all(bind=engine) # solo para Dev, para prod se usan migraciones
+
+    
 
 def get_db():
     db = SessionLocal()
@@ -111,6 +126,8 @@ class PostUpdate(BaseModel):
 class PostPublic(PostBase):
     id: int
     
+    model_config = ConfigDict(from_attributes=True)
+    
 class PostSummary(BaseModel):
     id: int
     title: str
@@ -133,7 +150,7 @@ def home():
 
 
 @app.get("/posts", response_model=PaginatedPosts)
-def get_posts(
+def list_posts(
     
     text: Optional[str] = Query(
     default=None, 
@@ -150,28 +167,31 @@ def get_posts(
     min_length=3,
     max_length=50,
     pattern=r"^[a-zA-Z]+$"
-),
-    per_page: int = Query(
-        10, ge=1, le=50, description="Número máximo de posts a retornar (1-50)"
-),
-    page: int = Query(
-        1, ge=1,
-        description="Número de página mayor o igual a 1"
-),
-    order_by: Literal["id", "title"] = Query(
-        "id", description="Campo por el cual ordenar los posts"
-),
-    direction: Literal["asc", "desc"] = Query(
-        "asc", description="Dirección de ordenamiento de los posts"
-)
+    ),
+        per_page: int = Query(
+            10, ge=1, le=50, description="Número máximo de posts a retornar (1-50)"
+    ),
+        page: int = Query(
+            1, ge=1,
+            description="Número de página mayor o igual a 1"
+    ),
+        order_by: Literal["id", "title"] = Query(
+            "id", description="Campo por el cual ordenar los posts"
+    ),
+        direction: Literal["asc", "desc"] = Query(
+            "asc", description="Dirección de ordenamiento de los posts"
+    ),
+    db: Session = Depends(get_db)
 ):
     
-    results = BLOG_POST
+    results = select(PostORM)
+    
+    query = query or text
     
     if query:
-        results = [post for post in results if query.lower() in post["title"].lower()]
+        results = results.where(PostORM.title.ilike(f"%{query}%"))
         
-    total = len(results)
+    total = db.scalar(select(func.count()).select_from(results.subquery())) or 0
     total_pages = ceil(total/per_page) if total > 0 else 0
     
     if total_pages == 0:
@@ -179,13 +199,19 @@ def get_posts(
     else:
         current_page = min(page, total_pages)
     
-    results = sorted(results, key=lambda post: post[order_by], reverse=(direction=="desc"))
+    if order_by == "id":
+        order_col = PostORM.id
+    else:
+        order_col = func.lower(PostORM.title)
+    
+    results = results.order_by(order_col.asc() if direction == "asc" else order_col.desc())
+    # results = sorted(results, key=lambda post: post[order_by], reverse=(direction=="desc"))
     
     if total_pages == 0:
-        items = []
+        items: List[PostORM] = []
     else:
         start = (current_page - 1) * per_page
-        items = results[start: start + per_page]        
+        items = db.execute(results.limit(per_page).offset(start)).scalars().all()   
     
     has_prev = current_page > 1
     has_next = current_page < total_pages if total_pages > 0 else False
@@ -238,19 +264,20 @@ def get_post(post_id: int = Path(
     
     return HTTPException(status_code=404, detail="Post no encontrado")
 
-@app.post("/posts", response_model=PostPublic, response_description="Post creado (Ok)")
-def create_post(post: PostCreate):
-    new_id = (BLOG_POST[-1]["id"]+1) if BLOG_POST else 1
-    new_post = {
-        "id": new_id, 
-        "title": post.title, 
-        "content": post.content, 
-        "tags": [tag.model_dump() for tag in post.tags],
-        "author": post.author.model_dump() if post.author else None
-        }
-    BLOG_POST.append(new_post)
-    return new_post
-
+@app.post("/posts", response_model=PostPublic, response_description="Post creado (Ok)", status_code=status.HTTP_201_CREATED)
+def create_post(post: PostCreate, db: Session = Depends(get_db)):
+    
+    new_post = PostORM(title=post.title, content=post.content)
+    
+    try:
+        db.add(new_post)
+        db.commit()
+        db.refresh(new_post)
+        return new_post
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear el post")
+    
 @app.put("/posts/{post_id}", response_model=PostPublic, response_description="Post actualizado", response_model_exclude_none=True)
 def update_post(post_id: int, data: PostUpdate):
     for post in BLOG_POST:
