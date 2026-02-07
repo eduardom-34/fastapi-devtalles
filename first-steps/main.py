@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from email.policy import default
+from turtle import pos
+from fastapi import FastAPI, Query
 
 app = FastAPI(title="Mini Blog")
 
@@ -15,5 +17,15 @@ def home():
 
 
 @app.get("/posts")
-def list_posts():
+def list_posts(query: str | None = Query(default=None, description="Texto para buscar por titulo")):
+    
+    if query:
+        results = [post for post in BLOG_POST if query.lower() in post["title"].lower()]
+        # for post in BLOG_POST:
+        #     if query.lower() in post["title"].lower():
+        #         results.append(post)
+                
+        return {"data": results, "query": query}
+    
     return {"data": BLOG_POST}
+
