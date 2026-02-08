@@ -1,4 +1,4 @@
-from email.policy import default
+
 from turtle import pos
 from fastapi import FastAPI, Query
 
@@ -29,3 +29,13 @@ def list_posts(query: str | None = Query(default=None, description="Texto para b
     
     return {"data": BLOG_POST}
 
+
+@app.get("/posts/{post_id}")
+def get_post(post_id: int):
+    for post in BLOG_POST:
+        if post["id"] == post_id:
+            return {"data": post}
+        
+    return {"error": "Post no encontrado"}
+        
+    
