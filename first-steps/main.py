@@ -1,6 +1,6 @@
 
 from turtle import pos
-from fastapi import FastAPI, Query
+from fastapi import Body, FastAPI, Query
 
 app = FastAPI(title="Mini Blog")
 
@@ -41,5 +41,19 @@ def get_post(post_id: int, include_content: bool = Query(default=True, descripti
     
         
     return {"error": "Post no encontrado"}
+
+
+@app.post("/posts")
+def create_post(post: dict = Body(...)):
+    if "title" not in post or "content" not in post:
+        return {"error": "Title y Content son requeridos"}
+    
+    if not str(post["title"]).strip():
+        return {"error": "title no puede estar vacío"}
+    
+    new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
+    new_post = {"id": new_id, "title": post["title"], "content": post["content"]}
+    BLOG_POST.append(new_post)
+    return {"message": "Post creado", "data": new_post}
         
     
