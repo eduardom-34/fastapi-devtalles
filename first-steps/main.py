@@ -13,7 +13,14 @@ BLOG_POST = [
     {"id": 3, "title": "Django vs FastAPI", "Content": "FastAPI es mas rapido por x razon"},
 ]
 
-class Post(BaseModel):
+class PostBase(BaseModel):
+    title: str
+    content: str
+    
+class PostCreate(PostBase):
+    pass
+
+class PostUpdate(BaseModel):
     title: str
     content: str
 
@@ -50,26 +57,20 @@ def get_post(post_id: int, include_content: bool = Query(default=True, descripti
 
 
 @app.post("/posts")
-def create_post(post: Post):
-    return {"data": post}
-    # if "title" not in post or "content" not in post:
-    #     return {"error": "Title y Content son requeridos"}
-    
-    # if not str(post["title"]).strip():
-    #     return {"error": "title no puede estar vacío"}
-    
-    # new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
-    # new_post = {"id": new_id, "title": post["title"], "content": post["content"]}
-    # BLOG_POST.append(new_post)
-    # return {"message": "Post creado", "data": new_post}
+def create_post(post: PostCreate):
+    new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
+    new_post = {"id": new_id, "title": post.title, "content": post.content}
+    BLOG_POST.append(new_post)
+    return {"message": "Post creado", "data": new_post}
         
         
 @app.put("/posts/{post_id}")
-def update_post(post_id: int, data: dict = Body(...)):
+def update_post(post_id: int, data: PostUpdate):
     for post in BLOG_POST:
         if post["id"] == post_id:
-            if "title" in data: post["title"] = data['title']
-            if "content" in data: post['content'] = data['content']
+            playload = data.model_dump(exclude_unset=True) #{"title": "Ricardo", "content": None} por eso usamos exlucde unset
+            if "title" in playload: post["title"] = data['title']
+            if "content" in playload: post['content'] = data['content']
             return {"message": "Post actualizado", "data": post}
         
         raise HTTPException(status_code=404, detail="Post no encontrado")
