@@ -2,6 +2,7 @@
 from email.policy import HTTP
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException
+from pydantic import BaseModel
 
 app = FastAPI(title="Mini Blog")
 
@@ -11,6 +12,10 @@ BLOG_POST = [
     {"id": 2, "title": "Mi segundo Post con FastAPI", "Content": "Este es mi segundo post con FastAPI"},
     {"id": 3, "title": "Django vs FastAPI", "Content": "FastAPI es mas rapido por x razon"},
 ]
+
+class Post(BaseModel):
+    title: str
+    content: str
 
 @app.get("/")
 def home():
@@ -45,17 +50,18 @@ def get_post(post_id: int, include_content: bool = Query(default=True, descripti
 
 
 @app.post("/posts")
-def create_post(post: dict = Body(...)):
-    if "title" not in post or "content" not in post:
-        return {"error": "Title y Content son requeridos"}
+def create_post(post: Post):
+    return {"data": post}
+    # if "title" not in post or "content" not in post:
+    #     return {"error": "Title y Content son requeridos"}
     
-    if not str(post["title"]).strip():
-        return {"error": "title no puede estar vacío"}
+    # if not str(post["title"]).strip():
+    #     return {"error": "title no puede estar vacío"}
     
-    new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
-    new_post = {"id": new_id, "title": post["title"], "content": post["content"]}
-    BLOG_POST.append(new_post)
-    return {"message": "Post creado", "data": new_post}
+    # new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
+    # new_post = {"id": new_id, "title": post["title"], "content": post["content"]}
+    # BLOG_POST.append(new_post)
+    # return {"message": "Post creado", "data": new_post}
         
         
 @app.put("/posts/{post_id}")
