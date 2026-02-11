@@ -69,11 +69,11 @@ def update_post(post_id: int, data: PostUpdate):
     for post in BLOG_POST:
         if post["id"] == post_id:
             playload = data.model_dump(exclude_unset=True) #{"title": "Ricardo", "content": None} por eso usamos exlucde unset
-            if "title" in playload: post["title"] = data['title']
-            if "content" in playload: post['content'] = data['content']
+            if "title" in playload: post["title"] = playload['title']
+            if "content" in playload: post['content'] = playload['content']
             return {"message": "Post actualizado", "data": post}
         
-        raise HTTPException(status_code=404, detail="Post no encontrado")
+    raise HTTPException(status_code=404, detail="Post no encontrado")
     
 @app.delete("/posts/{post_id}", status_code=204)
 def delete_post(post_id: int):
