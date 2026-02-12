@@ -2,24 +2,36 @@
 from email.policy import HTTP
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 
 app = FastAPI(title="Mini Blog")
 
 
 BLOG_POST = [
-    {"id": 1, "title": "Hola desde FastAPI", "Content": "Este es mi primer post con FastAPI"},
-    {"id": 2, "title": "Mi segundo Post con FastAPI", "Content": "Este es mi segundo post con FastAPI"},
-    {"id": 3, "title": "Django vs FastAPI", "Content": "FastAPI es mas rapido por x razon"},
+    {"id": 1, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 2, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 3, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
 ]
 
 class PostBase(BaseModel):
     title: str
     content: Optional[str] = "Contenido no disponible"
     
-class PostCreate(PostBase):
-    pass
+class PostCreate(BaseModel):
+    title: str = Field(
+        ...,
+        min_length=3,
+        max_length=100,
+        description="Titulo del post (minimo 3 caracteres, maximo 100)",
+        examples=["Mi primer post con FastAPI"]
+    )
+    content: str = Field(
+        default="Contenido no disponible",
+        min_length=10,
+        description="Contenido del post (min 10 caracteres)",
+        examples=["Este es un contenido valido porque tiene 10 caracteres o mas"]
+    )
 
 class PostUpdate(BaseModel):
     title: str
