@@ -2,7 +2,7 @@
 from email.policy import HTTP
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 
 app = FastAPI(title="Mini Blog")
@@ -32,6 +32,13 @@ class PostCreate(BaseModel):
         description="Contenido del post (min 10 caracteres)",
         examples=["Este es un contenido valido porque tiene 10 caracteres o mas"]
     )
+    
+    @field_validator("title")
+    @classmethod
+    def not_allowed_title(cls, value:str) -> str:
+        if "spam" in value.lower():
+            raise ValueError("El titulo no puede contener la palbra: 'spam")
+        return value
 
 class PostUpdate(BaseModel):
     title: str
