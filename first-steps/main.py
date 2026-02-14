@@ -1,9 +1,10 @@
 
 from email.policy import HTTP
+import string
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List
 
 app = FastAPI(title="Mini Blog")
 
@@ -43,13 +44,23 @@ class PostCreate(BaseModel):
 class PostUpdate(BaseModel):
     title: str
     content: Optional[str] = None
+    
+class PostPublic(PostBase):
+    id: int
+    
+    
+class PostSummary(BaseModel):
+    id: int
+    title: str
+    
+
 
 @app.get("/")
 def home():
     return {'message': "Bienvenidos a Mini Blog por Cesar"}
 
 
-@app.get("/posts")
+@app.get("/posts", response_model=List[PostPublic])
 def list_posts(query: str | None = Query(default=None, description="Texto para buscar por titulo")):
     
     if query:
@@ -58,9 +69,9 @@ def list_posts(query: str | None = Query(default=None, description="Texto para b
         #     if query.lower() in post["title"].lower():
         #         results.append(post)
                 
-        return {"data": results, "query": query}
+        return results
     
-    return {"data": BLOG_POST}
+    return BLOG_POST
 
 
 @app.get("/posts/{post_id}")
