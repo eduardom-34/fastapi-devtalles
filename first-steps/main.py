@@ -4,7 +4,7 @@ import string
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List
+from typing import Optional, List, Union
 
 app = FastAPI(title="Mini Blog")
 
@@ -17,7 +17,7 @@ BLOG_POST = [
 
 class PostBase(BaseModel):
     title: str
-    content: Optional[str] = "Contenido no disponible"
+    content: str
     
 class PostCreate(BaseModel):
     title: str = Field(
@@ -74,17 +74,17 @@ def list_posts(query: str | None = Query(default=None, description="Texto para b
     return BLOG_POST
 
 
-@app.get("/posts/{post_id}")
+@app.get("/posts/{post_id}", response_model=Union[PostPublic, PostSummary], response_description="Post encontrado")
 def get_post(post_id: int, include_content: bool = Query(default=True, description="Incluir o no el contenido")):
     
     for post in BLOG_POST:
         if post["id"] == post_id:
             if not include_content:
-                return {"data": {"id": post["id"], "title": post["title"]}}
-            return {"data": post}
+                return {"id": post["id"], "title": post["title"]}
+            return post
     
         
-    return {"error": "Post no encontrado"}
+    return HTTPException(status_code=404, detail="Post no encontrado")
 
 
 @app.post("/posts")
