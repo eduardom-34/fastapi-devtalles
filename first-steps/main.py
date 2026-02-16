@@ -15,9 +15,14 @@ BLOG_POST = [
     {"id": 3, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
 ]
 
+class Tag(BaseModel):
+    name: str = Field(..., min_length=2, max_length=30, description="Nombre de la etiqueta")
+    
+
 class PostBase(BaseModel):
     title: str
     content: str
+    tags: Optional[List[Tag]] = []
     
 class PostCreate(BaseModel):
     title: str = Field(
@@ -33,6 +38,7 @@ class PostCreate(BaseModel):
         description="Contenido del post (min 10 caracteres)",
         examples=["Este es un contenido valido porque tiene 10 caracteres o mas"]
     )
+    tags: List[Tag] = []
     
     @field_validator("title")
     @classmethod
@@ -90,7 +96,7 @@ def get_post(post_id: int, include_content: bool = Query(default=True, descripti
 @app.post("/posts", response_model=PostPublic, response_description="Post creado (OK)")
 def create_post(post: PostCreate):
     new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
-    new_post = {"id": new_id, "title": post.title, "content": post.content}
+    new_post = {"id": new_id, "title": post.title, "content": post.content, "tags": [tag.model_dump() for tag in post.tags]}
     BLOG_POST.append(new_post)
     return new_post
         
