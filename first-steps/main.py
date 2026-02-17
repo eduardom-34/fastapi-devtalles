@@ -2,7 +2,7 @@
 from email.policy import HTTP
 import string
 from turtle import pos
-from fastapi import Body, FastAPI, Query, HTTPException
+from fastapi import Body, FastAPI, Query, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator, EmailStr
 from typing import Optional, List, Union
 
@@ -86,7 +86,13 @@ def list_posts(query: str | None = Query(default=None, description="Texto para b
 
 
 @app.get("/posts/{post_id}", response_model=Union[PostPublic, PostSummary], response_description="Post encontrado")
-def get_post(post_id: int, include_content: bool = Query(default=True, description="Incluir o no el contenido")):
+def get_post(post_id: int = Path(
+        ...,
+        ge=1,
+        title="ID del post",
+        description="ID del post a obtener (debe ser un entero positivo)",
+        example=1
+    ), include_content: bool = Query(default=True, description="Incluir o no el contenido")):
     
     for post in BLOG_POST:
         if post["id"] == post_id:
