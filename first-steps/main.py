@@ -25,7 +25,7 @@ class Author(BaseModel):
 class PostBase(BaseModel):
     title: str
     content: str
-    tags: Optional[List[Tag]] = []
+    tags: Optional[List[Tag]] = Field(default_factory=list) #esto crea una lista vacoa por cada objeto 
     author: Optional[Author] = None
     
 class PostCreate(BaseModel):
@@ -42,7 +42,7 @@ class PostCreate(BaseModel):
         description="Contenido del post (min 10 caracteres)",
         examples=["Este es un contenido valido porque tiene 10 caracteres o mas"]
     )
-    tags: List[Tag] = []
+    tags: List[Tag] = Field(default_factory=list)  #[]
     author: Optional[Author] = None
     
     @field_validator("title")
@@ -53,7 +53,7 @@ class PostCreate(BaseModel):
         return value
 
 class PostUpdate(BaseModel):
-    title: str
+    title: Optional[str] = Field(None, min_length=3, max_length=100)
     content: Optional[str] = None
     
 class PostPublic(PostBase):
