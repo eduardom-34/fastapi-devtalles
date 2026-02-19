@@ -72,7 +72,14 @@ def home():
 
 
 @app.get("/posts", response_model=List[PostPublic])
-def list_posts(query: str | None = Query(default=None, description="Texto para buscar por titulo")):
+def list_posts(query: Optional[str] = Query(
+    default=None, 
+    description="Texto para buscar por titulo",
+    alias='search',
+    min_length=3,
+    max_length=50,
+    pattern=r"^[\w\sáéíóúÁÉÍÓÚüÜ-]+$"
+    )):
     
     if query:
         results = [post for post in BLOG_POST if query.lower() in post["title"].lower()]
