@@ -4,7 +4,7 @@ import string
 from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator, EmailStr
-from typing import Optional, List, Union
+from typing import Literal, Optional, List, Union
 
 app = FastAPI(title="Mini Blog")
 
@@ -79,17 +79,38 @@ def list_posts(query: Optional[str] = Query(
     min_length=3,
     max_length=50,
     pattern=r"^[\w\sáéíóúÁÉÍÓÚüÜ-]+$"
-    )):
+),
+    limit: int = Query(
+        10, ge=1, le=50,
+        description="Numero de resultados de  1 a 50"
+),
+    offset: int = Query(
+        0, ge=0,
+        description="Elementos a saltar antes de empezar la lista"
+),
+    
+    order_by: Literal["id", "title"] = Query(
+        "id", description="Campo de orden"
+),
+    direction: Literal["asc", "desc"] = Query(
+        "asc", description="Direccion de orden"
+)
+    
+               
+):
+    
+    results = BLOG_POST
+    
     
     if query:
-        results = [post for post in BLOG_POST if query.lower() in post["title"].lower()]
+        results =  [post for post in results if query.lower() in post["title"].lower()]
         # for post in BLOG_POST:
         #     if query.lower() in post["title"].lower():
         #         results.append(post)
-                
-        return results
+        
+        results = sorted(results, key=lambda  post: post[order_by], reverse=(direction=="desc"))
     
-    return BLOG_POST
+    return results[offset: offset + limit]
 
 
 @app.get("/posts/{post_id}", response_model=Union[PostPublic, PostSummary], response_description="Post encontrado")
