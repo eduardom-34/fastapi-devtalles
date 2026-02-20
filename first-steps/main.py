@@ -13,6 +13,21 @@ BLOG_POST = [
     {"id": 1, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
     {"id": 2, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
     {"id": 3, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 4, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 5, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 6, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 7, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 8, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 9, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 10, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 11, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 12, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 13, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 14, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 15, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 16, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
+    {"id": 17, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
+    {"id": 18, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
 ]
 
 class Tag(BaseModel):
@@ -94,9 +109,7 @@ def list_posts(query: Optional[str] = Query(
 ),
     direction: Literal["asc", "desc"] = Query(
         "asc", description="Direccion de orden"
-)
-    
-               
+)              
 ):
     
     results = BLOG_POST
@@ -107,8 +120,8 @@ def list_posts(query: Optional[str] = Query(
         # for post in BLOG_POST:
         #     if query.lower() in post["title"].lower():
         #         results.append(post)
-        
-        results = sorted(results, key=lambda  post: post[order_by], reverse=(direction=="desc"))
+    
+    results = sorted(results, key=lambda  post: post[order_by], reverse=(direction=="desc"))
     
     return results[offset: offset + limit]
 
