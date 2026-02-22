@@ -78,15 +78,19 @@ class PostPublic(PostBase):
 class PostSummary(BaseModel):
     id: int
     title: str
-    
 
+class PaginatedPost(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: List[PostPublic]
 
 @app.get("/")
 def home():
     return {'message': "Bienvenidos a Mini Blog por Cesar"}
 
 
-@app.get("/posts", response_model=List[PostPublic])
+@app.get("/posts", response_model=PaginatedPost)
 def list_posts(query: Optional[str] = Query(
     default=None, 
     description="Texto para buscar por titulo",
@@ -120,10 +124,13 @@ def list_posts(query: Optional[str] = Query(
         # for post in BLOG_POST:
         #     if query.lower() in post["title"].lower():
         #         results.append(post)
+        
+    total = len(results)
     
     results = sorted(results, key=lambda  post: post[order_by], reverse=(direction=="desc"))
     
-    return results[offset: offset + limit]
+    items = results[offset: offset + limit]
+    return PaginatedPost(total=total, limit=limit, offset=offset, items=items)
 
 
 @app.get("/posts/{post_id}", response_model=Union[PostPublic, PostSummary], response_description="Post encontrado")
