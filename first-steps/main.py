@@ -14,7 +14,12 @@ app = FastAPI(title="Mini Blog")
 BLOG_POST = [
     {"id": 1, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
     {"id": 2, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
-    {"id": 3, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
+    {"id": 3, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon", 
+     "tags": [
+         {"name": "django"}, 
+         {"name": "python"},
+         {"name": "fastapi"}
+         ]},
     {"id": 4, "title": "Hola desde FastAPI", "content": "Este es mi primer post con FastAPI"},
     {"id": 5, "title": "Mi segundo Post con FastAPI", "content": "Este es mi segundo post con FastAPI"},
     {"id": 6, "title": "Django vs FastAPI", "content": "FastAPI es mas rapido por x razon"},
@@ -109,7 +114,7 @@ def list_posts(query: Optional[str] = Query(
 ),
     per_page: int = Query(
         10, ge=1, le=50,
-        description="Numero de resultados de  1 a 50"
+        description="Numero de resultados 1-50"
 ),
     page: int = Query(
         1, ge=1,
@@ -148,6 +153,7 @@ def list_posts(query: Optional[str] = Query(
     else:
         start = (current_page - 1) * per_page
         items = results[start: start + per_page]
+        
     has_prev = current_page > 1
     has_next = current_page < total_pages if total_pages > 0 else False
         
@@ -163,6 +169,18 @@ def list_posts(query: Optional[str] = Query(
         search=query,
         items=items)
 
+@app.get("/posts/by-tags", response_model=List[PostPublic])
+def filter_by_tags(
+    tags: List[str] = Query(
+        ...,
+        min_length=2,
+        description="Una o mas etiquetas. Ejemplo ?tags=python&tags=fastapi"
+    )
+):
+    tags_lower = [tag.lower() for tag in tags]
+    return [
+        post for post in BLOG_POST if any( tag["name"].lower() in tags_lower for tag in post.get("tags", []))
+    ]
 
 @app.get("/posts/{post_id}", response_model=Union[PostPublic, PostSummary], response_description="Post encontrado")
 def get_post(post_id: int = Path(
