@@ -5,13 +5,14 @@ from math import ceil
 from re import search
 import string
 from turtle import pos
-from fastapi import Body, FastAPI, Query, HTTPException, Path
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from fastapi import Body, Depends, FastAPI, Query, HTTPException, Path, status
+from pydantic import BaseModel, ConfigDict, Field, field_validator, EmailStr
 from typing import Literal, Optional, List, Union
-from sqlalchemy import create_engine, null
-from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, Mapped, mapped_column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Integer, String, Text, DateTime
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.exc import SQLAlchemyError
 
-DATABASE_URL = os.gotenv("DATABASE_URL", "sqlite:///./blog.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./blog.db")
 print("Conetado a: ", DATABASE_URL)
 
 engine_kwargs = {}
@@ -116,6 +117,8 @@ class PostUpdate(BaseModel):
     
 class PostPublic(PostBase):
     id: int
+    
+    model_config = ConfigDict(from_attributes=True)
     
     
 class PostSummary(BaseModel):
@@ -245,17 +248,18 @@ def get_post(post_id: int = Path(
     return HTTPException(status_code=404, detail="Post no encontrado")
 
 
-@app.post("/posts", response_model=PostPublic, response_description="Post creado (OK)")
-def create_post(post: PostCreate):
-    new_id = (BLOG_POST[-1]["id"] + 1) if BLOG_POST else 1
-    new_post = {"id": new_id, 
-                "title": post.title,
-                "content": post.content, 
-                "tags": [tag.model_dump() for tag in post.tags],
-                "author": post.author.model_dump() if post.author else None
-                }
-    BLOG_POST.append(new_post)
-    return new_post
+@app.post("/posts", response_model=PostPublic, response_description="Post creado (OK)", status_code=status.HTTP_201_CREATED)
+def create_post(post: PostCreate, db: Session = Depends(get_db)):
+    
+    new_post = PostORM(title=post.title, content=post.content)
+    try:
+        db.add(new_post)
+        db.commit()
+        db.refresh(new_post)
+        return new_post
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Error al crear el post")
         
         
 @app.put("/posts/{post_id}", response_model=PostPublic, response_description="Post actualizado", response_model_exclude_none=True)
