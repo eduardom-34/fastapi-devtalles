@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 from email.policy import HTTP
 from math import ceil
@@ -7,8 +8,8 @@ from turtle import pos
 from fastapi import Body, FastAPI, Query, HTTPException, Path
 from pydantic import BaseModel, Field, field_validator, EmailStr
 from typing import Literal, Optional, List, Union
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine, null
+from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase, Mapped, mapped_column, Integer, String, Text, DateTime
 
 DATABASE_URL = os.gotenv("DATABASE_URL", "sqlite:///./blog.db")
 print("Conetado a: ", DATABASE_URL)
@@ -20,6 +21,28 @@ if DATABASE_URL.startswith("sqlite"):
 engine = create_engine(DATABASE_URL, echo=True, future=True, **engine_kwargs) 
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+
+class Base(DeclarativeBase):
+    pass
+
+class PostORM(Base):
+    __tablename__ = "posts"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    title: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    
+Base.metadata.create_all(engine) #dev
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
 
 app = FastAPI(title="Mini Blog")
 
