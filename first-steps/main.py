@@ -124,6 +124,8 @@ class PostPublic(PostBase):
 class PostSummary(BaseModel):
     id: int
     title: str
+    
+    model_config = ConfigDict(from_attributes=True)
 
 class PaginatedPost(BaseModel):
     page: int
@@ -236,16 +238,20 @@ def get_post(post_id: int = Path(
         title="ID del post",
         description="ID del post a obtener (debe ser un entero positivo)",
         example=1
-    ), include_content: bool = Query(default=True, description="Incluir o no el contenido")):
+    ), include_content: bool = Query(default=True, description="Incluir o no el contenido"), db: Session = Depends(get_db)):
     
-    for post in BLOG_POST:
-        if post["id"] == post_id:
-            if not include_content:
-                return {"id": post["id"], "title": post["title"]}
-            return post
+    post_find = select(PostORM).where(PostORM.id == post_id)
+    post = db.execute(post_find).scalar_one_or_none()
     
-        
-    return HTTPException(status_code=404, detail="Post no encontrado")
+    # post = db.get(PostORM, post_id)
+    
+    if not post:
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+    
+    if include_content:
+        return PostPublic.model_validate(post, from_attributes=True)
+    
+    return PostSummary.model_validate(post, from_attributes=True)
 
 
 @app.post("/posts", response_model=PostPublic, response_description="Post creado (OK)", status_code=status.HTTP_201_CREATED)
